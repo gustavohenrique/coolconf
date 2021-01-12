@@ -8,7 +8,7 @@ import (
 	"coolconf/test/assert"
 )
 
-func TestGetLoadFromEnvVarsWithoutGroup(t *testing.T) {
+func TestGetLoadFromEnvWithoutGroup(t *testing.T) {
 	os.Setenv("SOME_INT", "9")
 	os.Setenv("SOME_STR", "hi")
 	os.Setenv("SOME_BOOL", "true")
@@ -25,7 +25,7 @@ func TestGetLoadFromEnvVarsWithoutGroup(t *testing.T) {
 	assert.Equal(t, myConfig.Yes, true)
 }
 
-func TestLoadFromEnvVarsUsingGroupAsSuffix(t *testing.T) {
+func TestLoadFromEnvUsingGroupAsSuffix(t *testing.T) {
 	os.Setenv("OTHER_INT_DEV", "9")
 	os.Setenv("OTHER_STR_DEV", "hello")
 	os.Setenv("OTHER_BOOL_DEV", "true")
@@ -42,12 +42,12 @@ func TestLoadFromEnvVarsUsingGroupAsSuffix(t *testing.T) {
 	assert.Equal(t, myConfig.Yes, true)
 }
 
-func TestLoadFromEnvVarsUsingMultiGroup(t *testing.T) {
+func TestLoadFromEnvUsingMultiGroup(t *testing.T) {
 	os.Setenv("SOME_STR", "helloworld")
 	os.Setenv("SOME_STR_QA", "hello")
 	os.Setenv("SOME_STR_STAGING", "world")
 	type MyConfig struct {
-		Text   string `env:"SOME_STR"`
+		Text string `env:"SOME_STR"`
 	}
 	coolconf.New()
 	var qa, staging, global MyConfig
@@ -59,7 +59,7 @@ func TestLoadFromEnvVarsUsingMultiGroup(t *testing.T) {
 	assert.Equal(t, global.Text, "helloworld")
 }
 
-func TestClearOldValues(t *testing.T) {
+func TestClearOldValuesFromEnvVar(t *testing.T) {
 	os.Setenv("another_str_dev", "hello")
 	type MyConfig struct {
 		Text string `env:"another_str"`
@@ -79,4 +79,16 @@ func TestClearOldValues(t *testing.T) {
 	coolconf.Clear()
 	coolconf.Load(&old, "dev")
 	assert.Equal(t, old.Text, "helloworld")
+}
+
+func TestLoadFromEnvUsingDefaultValue(t *testing.T) {
+	type MyConfig struct {
+		Text   string `env:"MY_TEXT" default:"hello"`
+		Number int    `env:"MY_NUMBER" default:"9"`
+	}
+	coolconf.New()
+	var myConfig MyConfig
+	coolconf.Load(&myConfig)
+	assert.Equal(t, myConfig.Text, "hello")
+	assert.Equal(t, myConfig.Number, 9)
 }

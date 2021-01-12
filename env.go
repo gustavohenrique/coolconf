@@ -13,15 +13,10 @@ import (
 )
 
 var lookupEnv = os.LookupEnv
-
-// ErrInvalidSpecification indicates that a specification is of the wrong type.
 var ErrInvalidSpecification = errors.New("specification must be a struct pointer")
-
 var gatherRegexp = regexp.MustCompile("([^A-Z]+|[A-Z]+[^A-Z]+|[A-Z]+)")
 var acronymRegexp = regexp.MustCompile("([A-Z]+)([A-Z][^A-Z]+)")
 
-// A ParseError occurs when an environment variable cannot be converted to
-// the type required by a struct field during assignment.
 type ParseError struct {
 	KeyName   string
 	FieldName string
@@ -30,23 +25,18 @@ type ParseError struct {
 	Err       error
 }
 
-// Decoder has the same semantics as Setter, but takes higher precedence.
-// It is provided for historical compatibility.
 type Decoder interface {
 	Decode(value string) error
 }
 
-// Setter is implemented by types can self-deserialize values.
-// Any type that implements flag.Value also implements Setter.
 type Setter interface {
 	Set(value string) error
 }
 
 func (e *ParseError) Error() string {
-	return fmt.Sprintf("env.Process: assigning %[1]s to %[2]s: converting '%[3]s' to type %[4]s. details: %[5]s", e.KeyName, e.FieldName, e.Value, e.TypeName, e.Err)
+	return fmt.Sprintf("process: assigning %[1]s to %[2]s: converting '%[3]s' to type %[4]s. details: %[5]s", e.KeyName, e.FieldName, e.Value, e.TypeName, e.Err)
 }
 
-// varInfo maintains information about the configuration variable
 type varInfo struct {
 	Name  string
 	Alt   string
@@ -55,7 +45,19 @@ type varInfo struct {
 	Tags  reflect.StructTag
 }
 
-// GatherInfo gathers information about the specified struct
+func loadConfigFromEnv(destination interface{}, group string) {
+	prefix := ""
+	suffix := ""
+	if group != "" {
+		if settings.Env.UseGroupAsPrefix {
+			prefix = group + settings.Env.Separator
+		} else {
+			suffix = settings.Env.Separator + group
+		}
+	}
+	process(prefix, suffix, destination)
+}
+
 func gatherInfo(prefix, suffix string, spec interface{}) ([]varInfo, error) {
 	s := reflect.ValueOf(spec)
 
@@ -68,7 +70,6 @@ func gatherInfo(prefix, suffix string, spec interface{}) ([]varInfo, error) {
 	}
 	typeOfSpec := s.Type()
 
-	// over allocate an info array, we will extend if needed later
 	infos := make([]varInfo, 0, s.NumField())
 	for i := 0; i < s.NumField(); i++ {
 		f := s.Field(i)
@@ -80,16 +81,13 @@ func gatherInfo(prefix, suffix string, spec interface{}) ([]varInfo, error) {
 		for f.Kind() == reflect.Ptr {
 			if f.IsNil() {
 				if f.Type().Elem().Kind() != reflect.Struct {
-					// nil pointer to a non-struct: leave it alone
 					break
 				}
-				// nil pointer to struct: create a zero instance
 				f.Set(reflect.New(f.Type().Elem()))
 			}
 			f = f.Elem()
 		}
 
-		// Capture information about the config variable
 		info := varInfo{
 			Name:  ftype.Name,
 			Field: f,
@@ -98,10 +96,8 @@ func gatherInfo(prefix, suffix string, spec interface{}) ([]varInfo, error) {
 			// Alt:   strings.ToUpper(ftype.Tag.Get("env")),
 		}
 
-		// Default to the field name as the env var name (will be upcased)
 		info.Key = info.Name
 
-		// Best effort to un-pick camel casing as separate words
 		if isTrue(ftype.Tag.Get("split_words")) {
 			words := gatherRegexp.FindAllStringSubmatch(ftype.Name, -1)
 			if len(words) > 0 {
@@ -130,7 +126,6 @@ func gatherInfo(prefix, suffix string, spec interface{}) ([]varInfo, error) {
 		infos = append(infos, info)
 
 		if f.Kind() == reflect.Struct {
-			// honor Decode if present
 			if decoderFrom(f) == nil && setterFrom(f) == nil && textUnmarshaler(f) == nil && binaryUnmarshaler(f) == nil {
 				innerPrefix := prefix
 				if !ftype.Anonymous {
@@ -151,16 +146,10 @@ func gatherInfo(prefix, suffix string, spec interface{}) ([]varInfo, error) {
 	return infos, nil
 }
 
-// Process populates the specified struct based on environment variables
-func Process(prefix, suffix string, spec interface{}) error {
+func process(prefix, suffix string, spec interface{}) error {
 	infos, err := gatherInfo(prefix, suffix, spec)
 
 	for _, info := range infos {
-
-		// `os.Getenv` cannot differentiate between an explicitly set empty value
-		// and an unset value. `os.LookupEnv` is preferred to `syscall.Getenv`,
-		// but it is only available in go1.5 or newer. We're using Go build tags
-		// here to use os.LookupEnv for >=go1.5
 		value, ok := lookupEnv(info.Key)
 		if !ok && info.Alt != "" {
 			value, ok = lookupEnv(info.Alt)
@@ -205,7 +194,6 @@ func processField(value string, field reflect.Value) error {
 	if decoder != nil {
 		return decoder.Decode(value)
 	}
-	// look for Set method if Decode not defined
 	setter := setterFrom(field)
 	if setter != nil {
 		return setter.Set(value)
@@ -306,7 +294,6 @@ func processField(value string, field reflect.Value) error {
 }
 
 func interfaceFrom(field reflect.Value, fn func(interface{}, *bool)) {
-	// it may be impossible for a struct field to fail this check
 	if !field.CanInterface() {
 		return
 	}

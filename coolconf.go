@@ -55,22 +55,9 @@ func Load(destination interface{}, params ...string) interface{} {
 	return destination
 }
 
-func LoadConfigFromEnvVar(destination interface{}, group string) {
-	prefix := ""
-	suffix := ""
-	if group != "" {
-		if settings.Env.UseGroupAsPrefix {
-			prefix = group + settings.Env.Separator
-		} else {
-			suffix = settings.Env.Separator + group
-		}
-	}
-	Process(prefix, suffix, destination)
-}
-
 func loadTo(destination interface{}, group string) {
 	switch settings.Source {
 	default:
-		LoadConfigFromEnvVar(destination, group)
+		loadConfigFromEnv(destination, group)
 	}
 }
