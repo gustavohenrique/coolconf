@@ -43,7 +43,7 @@ type Setter interface {
 }
 
 func (e *ParseError) Error() string {
-	return fmt.Sprintf("envconfig.Process: assigning %[1]s to %[2]s: converting '%[3]s' to type %[4]s. details: %[5]s", e.KeyName, e.FieldName, e.Value, e.TypeName, e.Err)
+	return fmt.Sprintf("env.Process: assigning %[1]s to %[2]s: converting '%[3]s' to type %[4]s. details: %[5]s", e.KeyName, e.FieldName, e.Value, e.TypeName, e.Err)
 }
 
 // varInfo maintains information about the configuration variable
@@ -94,7 +94,8 @@ func gatherInfo(prefix, suffix string, spec interface{}) ([]varInfo, error) {
 			Name:  ftype.Name,
 			Field: f,
 			Tags:  ftype.Tag,
-			Alt:   strings.ToUpper(ftype.Tag.Get("envconfig")),
+			Alt:   ftype.Tag.Get("env"),
+			// Alt:   strings.ToUpper(ftype.Tag.Get("env")),
 		}
 
 		// Default to the field name as the env var name (will be upcased)

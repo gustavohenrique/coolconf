@@ -1,85 +1,76 @@
 package coolconf
 
 import (
-	"os"
-	"strings"
+	"context"
 )
 
 const (
-	SOURCE = "COOLCONF_SOURCE"
-	ENV    = "env"
-	FILE   = "file"
+	ENV               = "env"
+	FILE              = "file"
+	DEFAULT_SEPARATOR = "_"
 )
 
-var configs = make(map[string]interface{})
+var configs context.Context
+var settings *Settings
 
-type CoolConf struct {
-	source      string
-	group       string
-	destination interface{}
-	config      Config
+type Env struct {
+	UseGroupAsPrefix bool
+	Separator        string
 }
 
-type Config struct {
-	UseGroupAsPrefix  bool
-	UseLowerCaseGroup bool
-	Separator         string
+type Settings struct {
+	Source string
+	Env    Env
 }
 
-func New(destination interface{}, params ...Config) *CoolConf {
-	source := os.Getenv(SOURCE)
-	if source == "" {
-		source = ENV
-	}
-	config := Config{
-		Separator: "_",
-	}
+func New(params ...Settings) {
+	Clear()
+	settings = &Settings{}
 	if len(params) > 0 {
-		config = params[0]
+		settings = &params[0]
 	}
-	return &CoolConf{
-		source:      source,
-		destination: destination,
-		config:      config,
+	if settings.Env.Separator == "" {
+		settings.Env.Separator = DEFAULT_SEPARATOR
+	}
+	if settings.Source == "" {
+		settings.Source = ENV
 	}
 }
 
-func (c *CoolConf) NoGroup() *CoolConf {
-	c.group = ""
-	return c
+func Clear() {
+	configs = context.Background()
 }
 
-func (c *CoolConf) WithGroup(group string) *CoolConf {
-	if c.config.UseLowerCaseGroup {
-		c.group = strings.ToLower(group)
-	} else {
-		c.group = strings.ToUpper(group)
+func Load(destination interface{}, params ...string) interface{} {
+	var group string
+	if len(params) > 0 {
+		group = params[0]
 	}
-	return c
-}
-
-func (c *CoolConf) Load() interface{} {
-	if val, ok := configs[c.group]; ok {
+	if val := configs.Value(group); val != nil {
+		destination = val
 		return val
 	}
-	c.loadConfigFromEnvVar()
-	configs[c.group] = c.destination
-	return c.destination
+	loadTo(destination, group)
+	configs = context.WithValue(configs, group, destination)
+	return destination
 }
 
-func (c *CoolConf) Reload(destination interface{}) {
-	c.destination = destination
-	c.loadConfigFromEnvVar()
-	configs[c.group] = destination
-}
-
-func (c *CoolConf) loadConfigFromEnvVar() {
+func LoadConfigFromEnvVar(destination interface{}, group string) {
 	prefix := ""
 	suffix := ""
-	if c.config.UseGroupAsPrefix {
-		prefix = c.group + c.config.Separator
-	} else {
-		suffix = c.config.Separator + c.group
+	if group != "" {
+		if settings.Env.UseGroupAsPrefix {
+			prefix = group + settings.Env.Separator
+		} else {
+			suffix = settings.Env.Separator + group
+		}
 	}
-	Process(prefix, suffix, c.destination)
+	Process(prefix, suffix, destination)
+}
+
+func loadTo(destination interface{}, group string) {
+	switch settings.Source {
+	default:
+		LoadConfigFromEnvVar(destination, group)
+	}
 }
