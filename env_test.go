@@ -8,7 +8,7 @@ import (
 	"coolconf/test/assert"
 )
 
-func TestGetLoadFromEnvWithoutGroup(t *testing.T) {
+func TestLoadFromEnvWithoutGroup(t *testing.T) {
 	os.Setenv("SOME_INT", "9")
 	os.Setenv("SOME_STR", "hi")
 	os.Setenv("SOME_BOOL", "true")

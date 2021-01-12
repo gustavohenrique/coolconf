@@ -2,25 +2,28 @@ package coolconf
 
 import (
 	"context"
+	"os"
+	"strings"
 )
 
 const (
 	ENV               = "env"
-	FILE              = "file"
+	YAML              = "yaml"
 	DEFAULT_SEPARATOR = "_"
 )
 
 var configs context.Context
 var settings *Settings
 
-type Env struct {
+type Option struct {
 	UseGroupAsPrefix bool
 	Separator        string
 }
 
 type Settings struct {
 	Source string
-	Env    Env
+	Env    Option
+	Yaml   Option
 }
 
 func New(params ...Settings) {
@@ -31,6 +34,9 @@ func New(params ...Settings) {
 	}
 	if settings.Env.Separator == "" {
 		settings.Env.Separator = DEFAULT_SEPARATOR
+	}
+	if settings.Yaml.Separator == "" {
+		settings.Yaml.Separator = DEFAULT_SEPARATOR
 	}
 	if settings.Source == "" {
 		settings.Source = ENV
@@ -56,8 +62,28 @@ func Load(destination interface{}, params ...string) interface{} {
 }
 
 func loadTo(destination interface{}, group string) {
-	switch settings.Source {
+	var mode string
+	source := settings.Source
+	if isYaml(source) && isFile(source) {
+		mode = YAML
+	}
+	switch mode {
+	case YAML:
+		loadConfigFromYamlFile(destination, group)
 	default:
 		loadConfigFromEnv(destination, group)
 	}
+}
+
+func isYaml(filename string) bool {
+	f := strings.ToLower(filename)
+	return strings.HasSuffix(f, ".yaml") || strings.HasSuffix(f, ".yml")
+}
+
+func isFile(filename string) bool {
+	info, err := os.Stat(filename)
+	if os.IsNotExist(err) {
+		return false
+	}
+	return !info.IsDir()
 }

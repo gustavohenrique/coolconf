@@ -1,0 +1,4 @@
+database_url: "postgres://admin:admin@dev:5432/db"
+database:
+  port: 5432
+  ssl: true
