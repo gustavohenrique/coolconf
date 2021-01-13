@@ -76,14 +76,4 @@ To decrypt:
 		log.Fatalln("[ERROR]", err)
 	}
 	log.Println("[INFO] done!")
-	/*
-		router := web.NewRouter()
-		http.HandleFunc("/", router.Index())
-		port := os.Getenv("COOLCONF_PORT")
-		if port == "" {
-			port = "10987"
-		}
-		log.Println("Listening on " + port)
-		log.Fatal(http.ListenAndServe(":"+port, nil))
-	*/
 }
