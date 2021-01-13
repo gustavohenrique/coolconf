@@ -9,7 +9,7 @@ import (
 
 func getSettingsForYaml() coolconf.Settings {
 	return coolconf.Settings{
-		Source: "test/test_data/database.yaml",
+		Source: "test/testdata/database.yaml",
 	}
 }
 

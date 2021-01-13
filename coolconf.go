@@ -2,12 +2,14 @@ package coolconf
 
 import (
 	"context"
+	"log"
 	"os"
 	"strings"
 )
 
 const (
 	ENV               = "env"
+	YAML_FILE         = "yaml_file"
 	YAML              = "yaml"
 	DEFAULT_SEPARATOR = "_"
 )
@@ -21,9 +23,12 @@ type Option struct {
 }
 
 type Settings struct {
-	Source string
-	Env    Option
-	Yaml   Option
+	Source    string
+	SecretKey string
+	Encrypted bool
+	Key       string
+	Env       Option
+	Yaml      Option
 }
 
 func New(params ...Settings) {
@@ -47,6 +52,20 @@ func Clear() {
 	configs = context.Background()
 }
 
+func DecryptYamlFile(params ...string) {
+	if settings.SecretKey == "" || !settings.Encrypted || !isYamlFile(settings.Source) {
+		log.Fatalln("[error] Settings does not contains the secret key or encrypted=false or source is not a YAML file")
+	}
+	var group string
+	if len(params) > 0 {
+		group = params[0]
+	}
+	err := decryptYamlFile(group)
+	if err != nil {
+		log.Fatalln("[error] Failed to decrypt YAML file:", err)
+	}
+}
+
 func Load(destination interface{}, params ...string) interface{} {
 	var group string
 	if len(params) > 0 {
@@ -62,22 +81,25 @@ func Load(destination interface{}, params ...string) interface{} {
 }
 
 func loadTo(destination interface{}, group string) {
-	var mode string
 	source := settings.Source
-	if isYaml(source) && isFile(source) {
-		mode = YAML
+	mode := source
+	if isYamlFile(source) {
+		mode = YAML_FILE
 	}
 	switch mode {
-	case YAML:
+	case YAML_FILE:
 		loadConfigFromYamlFile(destination, group)
-	default:
+	case ENV:
 		loadConfigFromEnv(destination, group)
+	default:
+		unmarshalYaml([]byte(settings.Source), destination)
 	}
 }
 
-func isYaml(filename string) bool {
+func isYamlFile(filename string) bool {
 	f := strings.ToLower(filename)
-	return strings.HasSuffix(f, ".yaml") || strings.HasSuffix(f, ".yml")
+	isYaml := strings.HasSuffix(f, ".yaml") || strings.HasSuffix(f, ".yml")
+	return isYaml && isFile(filename)
 }
 
 func isFile(filename string) bool {

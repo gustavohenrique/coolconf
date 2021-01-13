@@ -1,6 +1,8 @@
 package coolconf
 
 import (
+	"coolconf/aes"
+	"encoding/hex"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -10,6 +12,39 @@ import (
 )
 
 func loadConfigFromYamlFile(destination interface{}, group string) {
+	source := getFilePathWithPrefixOrSuffix(settings, group)
+	content := readFile(source)
+	unmarshalYaml(content, destination)
+}
+
+func decryptYamlFile(group string) error {
+	source := getFilePathWithPrefixOrSuffix(settings, group)
+	content := readFile(source)
+	decoded, err := hex.DecodeString(string(content))
+	if err != nil {
+		return err
+	}
+	decrypted, err := aes.Decrypt(settings.SecretKey, decoded)
+	if err != nil {
+		return err
+	}
+	settings.Source = decrypted
+	return nil
+}
+
+func readFile(source string) []byte {
+	b, err := ioutil.ReadFile(source)
+	if err != nil {
+		log.Fatalf("[coolconf] Error reading %s: %s", source, err)
+	}
+	return b
+}
+
+func unmarshalYaml(b []byte, destination interface{}) error {
+	return yaml.Unmarshal(b, destination)
+}
+
+func getFilePathWithPrefixOrSuffix(settings *Settings, group string) string {
 	prefix := ""
 	suffix := ""
 	source := settings.Source
@@ -23,14 +58,7 @@ func loadConfigFromYamlFile(destination interface{}, group string) {
 			source = fmt.Sprintf("%s%s%s%s", dirname, filename, suffix, ext)
 		}
 	}
-	b, err := ioutil.ReadFile(source)
-	if err != nil {
-		log.Fatalf("[coolconf] Error reading %s: %s", source, err)
-	}
-	err = yaml.Unmarshal(b, destination)
-	if err != nil {
-		log.Fatalf("[coolconf] Error unmarshal %s: %s", source, err)
-	}
+	return source
 }
 
 func breakFilePath(source string) (string, string, string) {
