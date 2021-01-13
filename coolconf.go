@@ -66,6 +66,16 @@ func DecryptYamlFile(params ...string) {
 	}
 }
 
+func DecryptYaml(encoded []byte) {
+	if settings.SecretKey == "" || !settings.Encrypted {
+		log.Fatalln("[error] Cannot decrypt YAML string")
+	}
+	err := decryptYaml(encoded)
+	if err != nil {
+		log.Fatalln("[error] Failed to decrypt YAML:", err)
+	}
+}
+
 func Load(destination interface{}, params ...string) interface{} {
 	var group string
 	if len(params) > 0 {

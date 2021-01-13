@@ -20,6 +20,10 @@ func loadConfigFromYamlFile(destination interface{}, group string) {
 func decryptYamlFile(group string) error {
 	source := getFilePathWithPrefixOrSuffix(settings, group)
 	content := readFile(source)
+	return decryptYaml(content)
+}
+
+func decryptYaml(content []byte) error {
 	decoded, err := hex.DecodeString(string(content))
 	if err != nil {
 		return err
