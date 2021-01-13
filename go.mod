@@ -1,4 +1,4 @@
-module coolconf
+module github.com/gustavohenrique/coolconf
 
 go 1.15
 
