@@ -1,4 +1,4 @@
-# coolconf
+# CoolConf
 
 [![Coverage Status](https://coveralls.io/repos/github/gustavohenrique/coolconf/badge.svg?branch=main)](https://coveralls.io/github/gustavohenrique/coolconf?branch=main)
 
@@ -12,7 +12,9 @@ go get github.com/gustavohenrique/coolconf/.../
 
 ## Usage
 
-### Read from environment variables
+### Reading data
+
+#### Environment variables
 
 Initial values:
 
@@ -27,9 +29,10 @@ export STAGING__DATABASE_URL="postgres://user:pass@staging"
 The configuration struct must have the `env` annotation with the envvar's name.
 
 ```go
+package main
 import (
     "fmt"
-	"github.com/gustavohenrique/coolconf"
+    "github.com/gustavohenrique/coolconf"
 )
 
 type MyConfig struct {
@@ -39,12 +42,12 @@ type MyConfig struct {
 }
 
 func init() {
-	coolconf.New()
+    coolconf.New()
 }
 
 func main() {
-	var myConfig MyConfig
-	coolconf.Load(&myConfig)
+    var myConfig MyConfig
+    coolconf.Load(&myConfig)
     fmt.Println(myConfig.Text)
     fmt.Println(myConfig.Number)
     fmt.Println(myConfig.Yes)
@@ -59,29 +62,29 @@ type MyConfig struct {
 }
 
 func init() {
-	coolconf.New()
+    coolconf.New()
 }
 
 func main() {
-	var myConfig MyConfig
-	coolconf.Load(&myConfig, "DEV")
+    var myConfig MyConfig
+    coolconf.Load(&myConfig, "DEV")
     fmt.Println(myConfig.DatabaseURL)
     // output is postgres://user:pass@dev
 
-	coolconf.New(coolconf.Settings{
+    coolconf.New(coolconf.Settings{
         Source: coolconf.ENV,
         Env: coolconf.Option{
             UseGroupAsPrefix: true,
             Separator: "__",
         },
     })
-	coolconf.Load(&myConfig, "STAGING")
+    coolconf.Load(&myConfig, "STAGING")
     fmt.Println(myConfig.DatabaseURL)
     // output is postgres://user:pass@staging
 }
 ```
 
-### Read from YAML file
+#### YAML file
 
 File must end with .yaml or .yml.
 
@@ -93,9 +96,10 @@ echo "database_url: postgres://user:pass@dev" > /tmp/config_dev.yaml
 The configuration struct must have the `YAML` annotation with the envvar's name.
 
 ```go
+package main
 import (
     "fmt"
-	"github.com/gustavohenrique/coolconf"
+    "github.com/gustavohenrique/coolconf"
 )
 
 type MyConfig struct {
@@ -103,14 +107,14 @@ type MyConfig struct {
 }
 
 func init() {
-	coolconf.New(coolconf.Settings{
+    coolconf.New(coolconf.Settings{
         Source: "/tmp/config.yaml",
     })
 }
 
 func main() {
-	var myConfig MyConfig
-	coolconf.Load(&myConfig)
+    var myConfig MyConfig
+    coolconf.Load(&myConfig)
     fmt.Println(myConfig.DatabaseURL)
     // output: postgres://user:pass@localhost
 }
@@ -119,14 +123,14 @@ The second argument is the suffix or prefix with _ as default separator to the f
 
 ```go
 func main() {
-	var myConfig MyConfig
-	coolconf.Load(&myConfig, "dev")
+    var myConfig MyConfig
+    coolconf.Load(&myConfig, "dev")
     fmt.Println(myConfig.DatabaseURL)
     // output: postgres://user:pass@dev
 }
 ```
 
-### Read from encrypted string
+#### Encrypted string
 
 CoolConf provides the `cccli` tool to allow you to encrypt/decrypt files using [AES256-GCM](https://en.wikipedia.org/wiki/Galois/Counter_Mode).  
 You can encrypt a YAML file and store it in an S3 bucket and decrypt this file on the application's boot, for example.
@@ -146,12 +150,13 @@ cccli -decrypt /tmp/encrypted.yaml -output /tmp/config.yaml -secret mystrongpass
 This example read the hex string encrypted from the file:
 
 ```go
+package main
 import (
     "fmt"
     "log"
-	"io/ioutil"
+    "io/ioutil"
 
-	"github.com/gustavohenrique/coolconf"
+    "github.com/gustavohenrique/coolconf"
 )
 
 type MyConfig struct {
@@ -159,23 +164,86 @@ type MyConfig struct {
 }
 
 func init() {
-	coolconf.New(coolconf.Settings{
-		Encrypted: true,
-		SecretKey: "mystrongpass",
+    coolconf.New(coolconf.Settings{
+        Encrypted: true,
+        SecretKey: "mystrongpass",
     })
 }
 
 func main() {
-	bytes, _ := ioutil.ReadFile("/tmp/encrypted.yaml")
-	err := coolconf.DecryptYaml(bytes)
+    bytes, _ := ioutil.ReadFile("/tmp/encrypted.yaml")
+    err := coolconf.DecryptYaml(bytes)
     if err != nil {
         log.Fatalln(err)
     }
-	var myConfig MyConfig
-	coolconf.Load(&myConfig)
+    var myConfig MyConfig
+    coolconf.Load(&myConfig)
     fmt.Println(myConfig.DatabaseURL)
     // output: postgres://user:pass@localhost
 }
+```
+
+### Reset configuration
+
+You can reset the configuration clearing the old data and loading the new one.  
+For web applications, you can add a secret endpoint to do it, allowing your application gets a new configuration without a redeploy.
+
+```go
+package main
+
+import (
+    "os"
+    "log"
+    "net/http"
+    "github.com/gustavohenrique/coolconf"
+)
+
+type MyConfig struct {
+    DatabaseURL string `env:"DATABASE_URL"`
+}
+
+func init() {
+    coolconf.New()
+    os.Setenv("DATABASE_URL", "postgres://user:pass@localhost")
+}
+
+func view(w http.ResponseWriter, r *http.Request) {
+    if r.Method == "GET" {
+        var myConfig MyConfig
+        coolconf.Load(&myConfig)
+        w.WriteHeader(http.StatusOK)
+        w.Write([]byte("value=" + myConfig.DatabaseURL))
+    }
+}
+
+func reload(w http.ResponseWriter, r *http.Request) {
+    if r.Method == "GET" {
+        coolconf.Clear()
+        os.Setenv("DATABASE_URL", "postgres://admin:admin@127.0.0.1")
+        w.WriteHeader(http.StatusOK)
+        w.Write([]byte("reloaded!"))
+    }
+}
+
+func main() {
+    http.HandleFunc("/", view)
+    http.HandleFunc("/reload", reload)
+    log.Println("Listening :8080")
+    log.Fatal(http.ListenAndServe(":8080",nil))
+}
+```
+
+See the magic happening:
+
+```sh
+curl http://localhost:8080/
+value=postgres://user:pass@localhost
+
+curl http://localhost:8080/reload
+reloaded!
+
+curl http://localhost:8080/
+value=postgres://admin:admin@127.0.0.1
 ```
 
 ## License

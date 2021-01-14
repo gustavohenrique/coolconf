@@ -10,7 +10,6 @@ import (
 const (
 	ENV               = "env"
 	YAML_FILE         = "yaml_file"
-	YAML              = "yaml"
 	DEFAULT_SEPARATOR = "_"
 )
 
