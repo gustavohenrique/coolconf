@@ -3,8 +3,8 @@ package coolconf_test
 import (
 	"testing"
 
-	"coolconf"
-	"coolconf/test/assert"
+	"github.com/gustavohenrique/coolconf"
+	"github.com/gustavohenrique/coolconf/test/assert"
 )
 
 func getSettingsForEncryptedYamlFile() coolconf.Settings {

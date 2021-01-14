@@ -1,7 +1,6 @@
 package coolconf
 
 import (
-	"coolconf/aes"
 	"encoding/hex"
 	"fmt"
 	"io/ioutil"
@@ -9,6 +8,8 @@ import (
 	"path/filepath"
 
 	"gopkg.in/yaml.v2"
+
+	"github.com/gustavohenrique/coolconf/aes"
 )
 
 func loadConfigFromYamlFile(destination interface{}, group string) {

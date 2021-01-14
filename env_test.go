@@ -4,8 +4,8 @@ import (
 	"os"
 	"testing"
 
-	"coolconf"
-	"coolconf/test/assert"
+	"github.com/gustavohenrique/coolconf"
+	"github.com/gustavohenrique/coolconf/test/assert"
 )
 
 func TestLoadFromEnvWithoutGroup(t *testing.T) {
