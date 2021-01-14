@@ -45,7 +45,7 @@ type varInfo struct {
 	Tags  reflect.StructTag
 }
 
-func loadConfigFromEnv(destination interface{}, group string) {
+func loadConfigFromEnv(destination interface{}, group string) error {
 	prefix := ""
 	suffix := ""
 	if group != "" {
@@ -55,7 +55,7 @@ func loadConfigFromEnv(destination interface{}, group string) {
 			suffix = settings.Env.Separator + group
 		}
 	}
-	process(prefix, suffix, destination)
+	return process(prefix, suffix, destination)
 }
 
 func gatherInfo(prefix, suffix string, spec interface{}) ([]varInfo, error) {

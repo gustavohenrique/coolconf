@@ -56,7 +56,7 @@ To decrypt:
 		err = ioutil.WriteFile(output, []byte(decrypted), 0644)
 	}
 	quitIfError(err)
-	log.Println("[INFO] done!")
+	log.Println("[INFO] Done!")
 }
 
 func quitIfError(err error) {

@@ -2,7 +2,7 @@ package coolconf
 
 import (
 	"context"
-	"log"
+	"errors"
 	"os"
 	"strings"
 )
@@ -52,9 +52,9 @@ func Clear() {
 	configs = context.Background()
 }
 
-func DecryptYamlFile(params ...string) {
+func DecryptYamlFile(params ...string) error {
 	if settings.SecretKey == "" || !settings.Encrypted || !isYamlFile(settings.Source) {
-		log.Fatalln("[error] Settings does not contains the secret key or encrypted=false or source is not a YAML file")
+		return errors.New("Settings does not contains the secret key or encrypted=false or source is not a YAML file")
 	}
 	var group string
 	if len(params) > 0 {
@@ -62,48 +62,55 @@ func DecryptYamlFile(params ...string) {
 	}
 	err := decryptYamlFile(group)
 	if err != nil {
-		log.Fatalln("[error] Failed to decrypt YAML file:", err)
+		return errors.New("Failed to decrypt YAML file: " + err.Error())
 	}
+	return nil
 }
 
-func DecryptYaml(encoded []byte) {
+func DecryptYaml(encoded []byte) error {
 	if settings.SecretKey == "" || !settings.Encrypted {
-		log.Fatalln("[error] Cannot decrypt YAML string")
+		return errors.New("Cannot decrypt YAML string")
 	}
 	err := decryptYaml(encoded)
 	if err != nil {
-		log.Fatalln("[error] Failed to decrypt YAML:", err)
+		return errors.New("Failed to decrypt YAML: " + err.Error())
 	}
+	return nil
 }
 
-func Load(destination interface{}, params ...string) interface{} {
+func Load(destination interface{}, params ...string) error {
 	var group string
 	if len(params) > 0 {
 		group = params[0]
 	}
 	if val := configs.Value(group); val != nil {
 		destination = val
-		return val
+		return nil
 	}
-	loadTo(destination, group)
+	err := loadTo(destination, group)
+	if err != nil {
+		return err
+	}
 	configs = context.WithValue(configs, group, destination)
-	return destination
+	return nil
 }
 
-func loadTo(destination interface{}, group string) {
+func loadTo(destination interface{}, group string) error {
 	source := settings.Source
 	mode := source
 	if isYamlFile(source) {
 		mode = YAML_FILE
 	}
+	var err error
 	switch mode {
 	case YAML_FILE:
-		loadConfigFromYamlFile(destination, group)
+		err = loadConfigFromYamlFile(destination, group)
 	case ENV:
-		loadConfigFromEnv(destination, group)
+		err = loadConfigFromEnv(destination, group)
 	default:
-		unmarshalYaml([]byte(settings.Source), destination)
+		err = unmarshalYaml([]byte(settings.Source), destination)
 	}
+	return err
 }
 
 func isYamlFile(filename string) bool {

@@ -4,7 +4,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"path/filepath"
 
 	"gopkg.in/yaml.v2"
@@ -12,15 +11,21 @@ import (
 	"github.com/gustavohenrique/coolconf/aes"
 )
 
-func loadConfigFromYamlFile(destination interface{}, group string) {
+func loadConfigFromYamlFile(destination interface{}, group string) error {
 	source := getFilePathWithPrefixOrSuffix(settings, group)
-	content := readFile(source)
-	unmarshalYaml(content, destination)
+	content, err := readFile(source)
+	if err != nil {
+		return err
+	}
+	return unmarshalYaml(content, destination)
 }
 
 func decryptYamlFile(group string) error {
 	source := getFilePathWithPrefixOrSuffix(settings, group)
-	content := readFile(source)
+	content, err := readFile(source)
+	if err != nil {
+		return err
+	}
 	return decryptYaml(content)
 }
 
@@ -37,12 +42,12 @@ func decryptYaml(content []byte) error {
 	return nil
 }
 
-func readFile(source string) []byte {
+func readFile(source string) ([]byte, error) {
 	b, err := ioutil.ReadFile(source)
 	if err != nil {
-		log.Fatalf("[coolconf] Error reading %s: %s", source, err)
+		return b, fmt.Errorf("Error reading %s: %s", source, err)
 	}
-	return b
+	return b, nil
 }
 
 func unmarshalYaml(b []byte, destination interface{}) error {
