@@ -11,13 +11,6 @@ import (
 	"github.com/gustavohenrique/coolconf/aes"
 )
 
-func getFileToEncryptOrDecrypt(s1, s2 *string) string {
-	if *s1 != "" {
-		return *s1
-	}
-	return *s2
-}
-
 func main() {
 	var output, secret string
 	encrypt := flag.String("encrypt", "", "plain file to be encrypted")
@@ -27,10 +20,10 @@ func main() {
 	flag.Usage = func() {
 		program := os.Args[0]
 		fmt.Fprintf(os.Stderr, `To encrypt:
-%s --encrypt plain.yaml --output encrypted.yaml --secret strongpass
+%s -encrypt plain.yaml -output encrypted.yaml -secret strongpass
 
 To decrypt:
-%s --decrypt encrypted.yaml --output plain.yaml --secret strongpass
+%s -decrypt encrypted.yaml -output plain.yaml -secret strongpass
 `,
 			program,
 			program)
@@ -49,31 +42,32 @@ To decrypt:
 		log.Fatalln("[ERROR] Cannot read file", input, ":", err)
 	}
 
-	if encrypt != nil {
-		if secret == "" {
-			log.Fatalln("[ERROR] The secret cannot be empty")
-		}
+	if *encrypt != "" {
 		encrypted, err := aes.Encrypt(secret, content)
-		if err != nil {
-			log.Fatalln("[ERROR]", err)
-		}
+		quitIfError(err)
 		log.Println("[INFO] Writing file", output)
 		err = ioutil.WriteFile(output, []byte(encrypted), 0644)
 	}
-	if decrypt != nil {
-		if secret == "" {
-			log.Fatalln("[ERROR] The secret cannot be empty")
-		}
+	if *decrypt != "" {
 		message, _ := hex.DecodeString(string(content))
 		decrypted, err := aes.Decrypt(secret, message)
-		if err != nil {
-			log.Fatalln("[ERROR]", err)
-		}
+		quitIfError(err)
 		log.Println("[INFO] Writing file", output)
 		err = ioutil.WriteFile(output, []byte(decrypted), 0644)
 	}
+	quitIfError(err)
+	log.Println("[INFO] done!")
+}
+
+func quitIfError(err error) {
 	if err != nil {
 		log.Fatalln("[ERROR]", err)
 	}
-	log.Println("[INFO] done!")
+}
+
+func getFileToEncryptOrDecrypt(s1, s2 *string) string {
+	if *s1 != "" {
+		return *s1
+	}
+	return *s2
 }
