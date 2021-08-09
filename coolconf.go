@@ -22,12 +22,13 @@ type Option struct {
 }
 
 type Settings struct {
-	Source    string
-	SecretKey string
-	Encrypted bool
-	Key       string
-	Env       Option
-	Yaml      Option
+	Source                  string
+	SecretKey               string
+	Encrypted               bool
+	Key                     string
+	Env                     Option
+	Yaml                    Option
+	ShouldCreateDefaultYaml bool
 }
 
 func New(params ...Settings) {
@@ -103,6 +104,12 @@ func loadTo(destination interface{}, group string) error {
 	var err error
 	switch mode {
 	case YAML_FILE:
+		if settings.ShouldCreateDefaultYaml {
+			err = createYamlUsingDefaultConfigIfItDoesNotExists(settings.Source, destination)
+			if err != nil {
+				return err
+			}
+		}
 		err = loadConfigFromYamlFile(destination, group)
 	case ENV:
 		err = loadConfigFromEnv(destination, group)
@@ -115,7 +122,7 @@ func loadTo(destination interface{}, group string) error {
 func isYamlFile(filename string) bool {
 	f := strings.ToLower(filename)
 	isYaml := strings.HasSuffix(f, ".yaml") || strings.HasSuffix(f, ".yml")
-	return isYaml && isFile(filename)
+	return isYaml // && isFile(filename)
 }
 
 func isFile(filename string) bool {

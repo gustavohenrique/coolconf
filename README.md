@@ -130,6 +130,30 @@ func main() {
 }
 ```
 
+You can configure to create the YAML file using default values, if the file does not exists:
+
+```go
+package main
+import (
+    "fmt"
+    "github.com/gustavohenrique/coolconf"
+)
+type MyConfig struct {
+    Host string `yaml:"host" default:"localhost"`
+    Port int    `yaml:"port" default:"8080"`
+}
+func main() {
+    coolconf.New(coolconf.Settings{
+        Source: "/tmp/server.yaml",
+        ShouldCreateDefaultYaml: true,
+    })
+    var myConfig MyConfig
+    coolconf.Load(&myConfig)
+    fmt.Println(myConfig.Host, ":", myConfig.Port)
+    // output: localhost:8080
+}
+```
+
 #### Encrypted string
 
 CoolConf provides the `cccli` tool to allow you to encrypt/decrypt files using [AES256-GCM](https://en.wikipedia.org/wiki/Galois/Counter_Mode).  

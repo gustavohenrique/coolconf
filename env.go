@@ -55,10 +55,51 @@ func loadConfigFromEnv(destination interface{}, group string) error {
 			suffix = settings.Env.Separator + group
 		}
 	}
-	return process(prefix, suffix, destination)
+	return process(prefix, suffix, "env", destination)
 }
 
-func gatherInfo(prefix, suffix string, spec interface{}) ([]varInfo, error) {
+func process(prefix, suffix, tagName string, spec interface{}) error {
+	infos, err := gatherInfo(prefix, suffix, tagName, spec)
+
+	for _, info := range infos {
+		value, ok := lookupEnv(info.Key)
+		if !ok && info.Alt != "" {
+			value, ok = lookupEnv(info.Alt)
+		}
+
+		def := info.Tags.Get("default")
+		if def != "" && !ok {
+			value = def
+		}
+
+		req := info.Tags.Get("required")
+		if !ok && def == "" {
+			if isTrue(req) {
+				key := info.Key
+				if info.Alt != "" {
+					key = info.Alt
+				}
+				return fmt.Errorf("required key %s missing value", key)
+			}
+			continue
+		}
+
+		err = processField(value, info.Field)
+		if err != nil {
+			return &ParseError{
+				KeyName:   info.Key,
+				FieldName: info.Name,
+				TypeName:  info.Field.Type().String(),
+				Value:     value,
+				Err:       err,
+			}
+		}
+	}
+
+	return err
+}
+
+func gatherInfo(prefix, suffix, tagName string, spec interface{}) ([]varInfo, error) {
 	s := reflect.ValueOf(spec)
 
 	if s.Kind() != reflect.Ptr {
@@ -92,7 +133,7 @@ func gatherInfo(prefix, suffix string, spec interface{}) ([]varInfo, error) {
 			Name:  ftype.Name,
 			Field: f,
 			Tags:  ftype.Tag,
-			Alt:   ftype.Tag.Get("env"),
+			Alt:   ftype.Tag.Get(tagName),
 			// Alt:   strings.ToUpper(ftype.Tag.Get("env")),
 		}
 
@@ -133,7 +174,7 @@ func gatherInfo(prefix, suffix string, spec interface{}) ([]varInfo, error) {
 				}
 
 				embeddedPtr := f.Addr().Interface()
-				embeddedInfos, err := gatherInfo(innerPrefix, suffix, embeddedPtr)
+				embeddedInfos, err := gatherInfo(innerPrefix, suffix, tagName, embeddedPtr)
 				if err != nil {
 					return nil, err
 				}
@@ -144,47 +185,6 @@ func gatherInfo(prefix, suffix string, spec interface{}) ([]varInfo, error) {
 		}
 	}
 	return infos, nil
-}
-
-func process(prefix, suffix string, spec interface{}) error {
-	infos, err := gatherInfo(prefix, suffix, spec)
-
-	for _, info := range infos {
-		value, ok := lookupEnv(info.Key)
-		if !ok && info.Alt != "" {
-			value, ok = lookupEnv(info.Alt)
-		}
-
-		def := info.Tags.Get("default")
-		if def != "" && !ok {
-			value = def
-		}
-
-		req := info.Tags.Get("required")
-		if !ok && def == "" {
-			if isTrue(req) {
-				key := info.Key
-				if info.Alt != "" {
-					key = info.Alt
-				}
-				return fmt.Errorf("required key %s missing value", key)
-			}
-			continue
-		}
-
-		err = processField(value, info.Field)
-		if err != nil {
-			return &ParseError{
-				KeyName:   info.Key,
-				FieldName: info.Name,
-				TypeName:  info.Field.Type().String(),
-				Value:     value,
-				Err:       err,
-			}
-		}
-	}
-
-	return err
 }
 
 func processField(value string, field reflect.Value) error {

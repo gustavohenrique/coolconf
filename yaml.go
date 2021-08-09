@@ -54,6 +54,18 @@ func unmarshalYaml(b []byte, destination interface{}) error {
 	return yaml.Unmarshal(b, destination)
 }
 
+func createYamlUsingDefaultConfigIfItDoesNotExists(source string, destination interface{}) error {
+	process("", "", "yaml", destination)
+	if !isFile(source) {
+		b, err := yaml.Marshal(destination)
+		if err != nil {
+			return err
+		}
+		return ioutil.WriteFile(source, b, 0644)
+	}
+	return nil
+}
+
 func getFilePathWithPrefixOrSuffix(settings *Settings, group string) string {
 	prefix := ""
 	suffix := ""
