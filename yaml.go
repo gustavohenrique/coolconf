@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io/ioutil"
+	"os"
 	"path/filepath"
 
 	"gopkg.in/yaml.v2"
@@ -56,9 +57,12 @@ func unmarshalYaml(b []byte, destination interface{}) error {
 
 func createYamlUsingDefaultConfigIfItDoesNotExists(source string, destination interface{}) error {
 	process("", "", "yaml", destination)
-	if !isFile(source) {
+	if !isFileExist(source) {
 		b, err := yaml.Marshal(destination)
 		if err != nil {
+			return err
+		}
+		if err := os.MkdirAll(filepath.Dir(source), os.ModePerm); err != nil {
 			return err
 		}
 		return ioutil.WriteFile(source, b, 0644)

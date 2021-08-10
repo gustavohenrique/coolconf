@@ -122,10 +122,10 @@ func loadTo(destination interface{}, group string) error {
 func isYamlFile(filename string) bool {
 	f := strings.ToLower(filename)
 	isYaml := strings.HasSuffix(f, ".yaml") || strings.HasSuffix(f, ".yml")
-	return isYaml // && isFile(filename)
+	return isYaml
 }
 
-func isFile(filename string) bool {
+func isFileExist(filename string) bool {
 	info, err := os.Stat(filename)
 	if os.IsNotExist(err) {
 		return false
