@@ -48,7 +48,7 @@ func readFile(source string) ([]byte, error) {
 	if err != nil {
 		return b, fmt.Errorf("Error reading %s: %s", source, err)
 	}
-	return b, nil
+	return []byte(os.ExpandEnv(string(b))), nil
 }
 
 func unmarshalYaml(b []byte, destination interface{}) error {

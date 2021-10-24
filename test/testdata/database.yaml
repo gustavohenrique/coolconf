@@ -1,4 +1,5 @@
 database_url: "postgres://root:root@localhost:5432/db"
+schema_file: ${HOME}/schema.sql
 database:
   port: 5432
   ssl: true

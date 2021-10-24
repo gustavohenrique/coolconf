@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
+	"path"
 	"path/filepath"
 	"testing"
 	"time"
@@ -115,4 +116,17 @@ func TestCreateYamlAndAllParentDir(t *testing.T) {
 
 	_, err := os.Stat(source)
 	assert.False(t, os.IsNotExist(err))
+}
+
+func TestParseEnvvars(t *testing.T) {
+	type MyConfig struct {
+		Schema string `yaml:"schema_file"`
+	}
+	settings := getSettingsForYaml()
+	coolconf.New(settings)
+	var myConfig MyConfig
+	coolconf.Load(&myConfig)
+	homeDir, _ := os.UserHomeDir()
+	expected := path.Join(homeDir, "schema.sql")
+	assert.Equal(t, expected, myConfig.Schema, fmt.Sprintf("Expected %s and got %s", expected, myConfig.Schema))
 }
