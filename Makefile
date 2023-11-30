@@ -13,4 +13,6 @@ linter:
 
 install: setup
 setup:
-	$(GO) get -u golang.org/x/tools/cmd/goimports
+	$(GO) install golang.org/x/tools/cmd/goimports@latest
+	$(GO) get -u github.com/rakyll/gotest
+	$(GO) install github.com/rakyll/gotest

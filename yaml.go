@@ -1,9 +1,10 @@
 package coolconf
 
 import (
+	"bytes"
 	"encoding/hex"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 	"path/filepath"
 
@@ -44,11 +45,17 @@ func decryptYaml(content []byte) error {
 }
 
 func readFile(source string) ([]byte, error) {
-	b, err := ioutil.ReadFile(source)
+	b := bytes.NewBuffer(nil)
+	f, err := os.Open(filepath.Clean(source))
 	if err != nil {
-		return b, fmt.Errorf("Error reading %s: %s", source, err)
+		return b.Bytes(), fmt.Errorf("Error reading %s: %s", source, err)
 	}
-	return []byte(os.ExpandEnv(string(b))), nil
+	defer f.Close()
+	_, err = io.Copy(b, f)
+	if err != nil {
+		return b.Bytes(), fmt.Errorf("Error copying bytes %s: %s", source, err)
+	}
+	return []byte(os.ExpandEnv(b.String())), nil
 }
 
 func unmarshalYaml(b []byte, destination interface{}) error {
@@ -56,7 +63,10 @@ func unmarshalYaml(b []byte, destination interface{}) error {
 }
 
 func createYamlUsingDefaultConfigIfItDoesNotExists(source string, destination interface{}) error {
-	process("", "", "yaml", destination)
+	err := process("", "", "yaml", destination)
+	if err != nil {
+		return err
+	}
 	if !isFileExist(source) {
 		b, err := yaml.Marshal(destination)
 		if err != nil {
@@ -65,7 +75,7 @@ func createYamlUsingDefaultConfigIfItDoesNotExists(source string, destination in
 		if err := os.MkdirAll(filepath.Dir(source), os.ModePerm); err != nil {
 			return err
 		}
-		return ioutil.WriteFile(source, b, 0644)
+		return os.WriteFile(source, b, 0600)
 	}
 	return nil
 }
